@@ -28,7 +28,7 @@ namespace EmailingService
         private string database;
         private string uid;
         private string password;
-
+        string BatchNo = string.Empty;
         protected long mInvoiceID;
         public long InvoiceID
         {
@@ -60,10 +60,12 @@ namespace EmailingService
         {
             try
             {
-                string BatchNo = string.Empty;
+                
                 string str = "select * from BroadcastMessagesList where statusID=1";
                 string Email = string.Empty;
                 string Mobile = string.Empty;
+                string EmailBody = string.Empty;
+                string EmailHeader = string.Empty;
                 DataSet dsEmailList = ReturnDs(str);
                 DataSet MemberDetails = new DataSet();
                 DataSet EmailDetails = new DataSet();
@@ -83,15 +85,20 @@ namespace EmailingService
                             foreach (DataRow row in dsMgsNum.Tables[0].Rows)
                             {
 
-                               EmailDetails = 
+                                EmailDetails = getMessageDetails(int.Parse(BatchNo));
+                                
                                 MemberDetails = getContactDetails(int.Parse(BatchNo));
 
                                 if (MemberDetails != null)
                                 {
                                     DataRow rws = MemberDetails.Tables[0].Rows[0];
                                     Email = rws["Email"].ToString();
-                                    //Mobile = rws["MobileNo"].ToString();
 
+                                    DataRow email = EmailDetails.Tables[0].Rows[0];
+                                    EmailBody = email["Message"].ToString();
+                                    EmailHeader = email["BroadcastMessgeTitle"].ToString();
+
+                                    SendHtmlFormattedEmail(Email, EmailHeader, EmailBody, EmailBody, int.Parse(rws["MemberID"].ToString()));
 
                                 }
 
@@ -138,6 +145,120 @@ namespace EmailingService
                 return false;
             }
         }
+
+        private void SendHtmlFormattedEmail(string recepientEmail, string subject, string body, string MessageBody, int MemberId)
+        {
+            string str = string.Empty;
+
+            try
+            {
+
+                ServicePointManager.ServerCertificateValidationCallback = (s, certificate, chain, sslPolicyErrors) => true;
+                var AccessLink = " https://www.comartononline.com/AGMSystem/Registration/PortalRegistration";
+
+                SmtpClient Client = new SmtpClient()
+                {
+                    Credentials = new NetworkCredential("training@zapf.co.zw", "Fuq97442"),
+                    Port = 587,
+                    Host = "smtp.office365.com",
+                    EnableSsl = true,
+                };
+
+
+
+                MailMessage Message = new MailMessage();
+                Message.From = new MailAddress("training@zapf.co.zw", "ZAPF");
+                Message.To.Add(recepientEmail);
+                Message.Subject = subject;
+                Message.IsBodyHtml = true;
+
+
+
+                string filepath = "Select FilePath from EmailAttachments where BroadcastMessagesListID=" + BatchNo + ";";
+                DataSet ds = ReturnDs(filepath);
+                if (ds != null)
+                {
+                    foreach (DataRow item in ds.Tables[0].Rows)
+                    {
+                        string filePath = item["FilePath"].ToString();
+                        Message.Attachments.Add(new Attachment(filePath));
+                    }
+                }
+
+
+                //// Set the HTML body of the email
+                DataSet EmailDets = getMessageDetails(int.Parse(BatchNo));
+                DataRow dr  = EmailDets.Tables[0].Rows[0];
+                if (dr["Format"].ToString() == "1")
+                {
+                    //populate body with template already loaded 
+                    body = $@"<html>
+                    <body>
+
+                        <p>Dear Member,</p>
+                        <p>{MessageBody}</p>
+                        <p>Looking forward to your submissions.</p>
+                        <p>Regards,</p>
+                        <p>ZAPF </p>
+                    </body>
+                      <footer>
+                        <footer>
+                            <div class = ""row"">
+                                <div class = ""column"">
+                                    <img src = ""https://zapf.co.zw/assets/images/logo.png"">
+                                </div>
+                                <div class = ""column"">
+                                    <p class = ""details"" >
+
+                                        Zimbabwe Association of Pension Funds (ZAPF)<br> 
+                                        3 Penn Place Close<br>
+                                        Strathaven<br>
+                                        Harare<br>
+                                        +263 242 333341<br>
+                                        +263 774 000 040 / 715 000 040 / 776 174 138<br>
+                                </div>
+            
+                            </div>
+        
+                        </footer>
+                        </footer>
+                </html>";
+                }
+                else
+                {
+
+                    body = PopulateBody(MemberId);
+                }
+
+                // Create an alternate view with the HTML body
+                AlternateView htmlView = AlternateView.CreateAlternateViewFromString(body, null, "text/html");
+
+                Message.AlternateViews.Add(htmlView);
+                try
+                {
+
+                    Client.Send(Message);
+                    
+                }
+                catch (Exception e)
+                {
+
+                    LogScriptor.WriteErrorLog("Error reported @ SendHtmlFormattedEmail: " + e.Message); ;
+                }
+
+                str = "update BroadcastMessagesList set statusID=2 WHERE ID='" + BatchNo + "'";
+                db.ExecuteNonQuery(CommandType.Text, str);
+            }
+            catch (Exception ex)
+            {
+                LogScriptor.WriteErrorLog("Error reported @ SendHtmlFormattedEmail: " + ex.Message); ;
+                str = "update BroadcastMessagesList set statusID=2 WHERE ID='" + BatchNo + "'";
+                db.ExecuteNonQuery(CommandType.Text, str);
+            }
+        }
+
+
+
         //protected void SendSMSAlert(string UserID, string Password, string SenderID, string MobileNo, string Message)
         //{
 
