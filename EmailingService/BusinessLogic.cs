@@ -66,6 +66,7 @@ namespace EmailingService
                 string Mobile = string.Empty;
                 DataSet dsEmailList = ReturnDs(str);
                 DataSet MemberDetails = new DataSet();
+                DataSet EmailDetails = new DataSet();
                 if (dsEmailList != null)
                 {
                     BatchNo = dsEmailList.Tables[0].Rows[0]["ID"].ToString();
@@ -82,7 +83,7 @@ namespace EmailingService
                             foreach (DataRow row in dsMgsNum.Tables[0].Rows)
                             {
 
-                               
+                               EmailDetails = 
                                 MemberDetails = getContactDetails(int.Parse(BatchNo));
 
                                 if (MemberDetails != null)
@@ -90,23 +91,25 @@ namespace EmailingService
                                     DataRow rws = MemberDetails.Tables[0].Rows[0];
                                     Email = rws["Email"].ToString();
                                     //Mobile = rws["MobileNo"].ToString();
+
+
                                 }
 
 
-                                DateTime dt = DateTime.Now;
-                                string formattedDate = dt.ToString("MMMM yyyy");
+                                //DateTime dt = DateTime.Now;
+                                //string formattedDate = dt.ToString("MMMM yyyy");
 
 
 
-                                string Message = $"Here are your Login Credentials as at {formattedDate}";
+                                //string Message = $"Here are your Login Credentials as at {formattedDate}";
 
-                                if (Email != "" || !string.IsNullOrEmpty(Email))
-                                {
-                                    SendEmail(Email, "Login  Credentials", Message);
-                                }
+                                //if (Email != "" || !string.IsNullOrEmpty(Email))
+                                //{
+                                //    SendEmail(Email, "Login  Credentials", Message);
+                                //}
 
-                                str = "update BroadcastListContacts set StatusID=2 WHERE ID = " + int.Parse(row["ID"].ToString()) + " AND BroadcastListID='" + BatchNo + "' ";
-                                db.ExecuteNonQuery(CommandType.Text, str);
+                                //str = "update BroadcastListContacts set StatusID=2 WHERE ID = " + int.Parse(row["ID"].ToString()) + " AND BroadcastListID='" + BatchNo + "' ";
+                                //db.ExecuteNonQuery(CommandType.Text, str);
                             }
 
                             str = "update BroadcastMessagesList set statusID=2 WHERE ID='" + BatchNo + "'";
@@ -157,6 +160,27 @@ namespace EmailingService
             try
             {
                 string str = "select Bc.ID,Bc.MemberID,pp.LastName,pp.FirstName,pp.Email from BroadcastListContacts Bc inner join RegistrationMembers pp on pp.Id = Bc.MemberID  where BroadcastListID = " + broadcastID + "";
+                DataSet ds = db.ExecuteDataSet(CommandType.Text, str);
+                if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
+                {
+                    return ds;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                
+                return null;
+            }
+        }
+        public DataSet getMessageDetails(int broadcastID)
+        {
+            try
+            {
+                string str = "select * from BroadcastMessagesList where ID = " + broadcastID + "";
                 DataSet ds = db.ExecuteDataSet(CommandType.Text, str);
                 if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
                 {
