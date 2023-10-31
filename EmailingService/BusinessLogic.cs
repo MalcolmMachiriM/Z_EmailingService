@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Practices.EnterpriseLibrary.Data;
 using System.Net.Mail;
 using System.IO;
+using System.Web;
 
 namespace EmailingService
 {
@@ -227,7 +228,7 @@ namespace EmailingService
                 else
                 {
 
-                    body = PopulateBody(MemberId);
+                    body = PopulateBody(MemberId, MessageBody);
                 }
 
                 // Create an alternate view with the HTML body
@@ -257,7 +258,30 @@ namespace EmailingService
             }
         }
 
+        private string PopulateBody(int MemberID, string MessageBody)
+        {
+            string memberName = string.Empty;
+            DataSet reg = ReturnDs("SELECT * FROM RegistrationMembers WHERE Id = " + MemberID+"");
+            DataRow dets = reg.Tables[0].Rows[0];
+            if (reg!=null)
+            {
+                memberName = dets["FirstName"] + " " + dets["LastName"];
+            }
 
+            DataSet ds = ReturnDs("Select * from BroadcastMessagesList where id = "+BatchNo+"");
+            DataRow dr = ds.Tables[0].Rows[0];
+
+            string body = string.Empty;
+            using (StreamReader reader = new StreamReader(HttpContext.Current.Server.MapPath("C:/comarsoft/AGMSystem/AGMSystem/communication/Templates/" + dr["Template"])))
+            {
+                body = reader.ReadToEnd();
+            }
+            body = body.Replace("{BODY}", MessageBody);
+            body = body.Replace("{MEMBER}", memberName);
+            return body;
+
+
+        }
 
         //protected void SendSMSAlert(string UserID, string Password, string SenderID, string MobileNo, string Message)
         //{
